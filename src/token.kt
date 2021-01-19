@@ -6,7 +6,12 @@ enum class TokenType {
     DIV,
     LPAREN,
     RPAREN,
-    EOL
+    EOL,
+    BEGIN,
+    END,
+    EXIT,
+    ASSIGN,
+    VAR
 }
 
 class Token(val type: TokenType, val value: String) {

@@ -1,6 +1,8 @@
 class Lexer(val text: String) {
     private var pos: Int = 0
     private var currentChar: Char? = null
+    private var buffer = ""
+    private var secondBuffer = ""
 
     init {
         currentChar = text[pos]
@@ -29,21 +31,60 @@ class Lexer(val text: String) {
                 '*' -> type = TokenType.MUL
                 '(' -> type = TokenType.LPAREN
                 ')' -> type = TokenType.RPAREN
-            }
+                ';' -> type = TokenType.EOL
+                '.' -> type = TokenType.EXIT
+                else ->{
+                    var pair = collectChars(currentChar!!)
+                    type = pair.first
+                    value = pair.second
 
-//            if (type != null) {
-//                forward()
-//                return Token(type, value)
-//            }
+                }
+            }
 
             type?.let {
                 forward()
                 return Token(it, value)
             }
 
+            if(type == null){
+                forward()
+                continue
+            }
+
             throw InterpreterException("invalid token")
         }
         return Token(TokenType.EOL, "")
+    }
+
+    private  fun collectChars(currentChar: Char): Pair<TokenType?, String> {
+
+        if (secondBuffer.isNotEmpty()){
+            buffer = secondBuffer
+            secondBuffer = ""
+        }
+
+        if(buffer.isNotBlank() && currentChar == ':'){
+            secondBuffer = ":"
+            return Pair(TokenType.VAR, buffer)
+        }
+
+        buffer  += currentChar
+
+        when(buffer){
+            "BEGIN" -> {
+                buffer =""
+                return Pair(TokenType.BEGIN, "BEGIN")
+            }
+            "END" -> {
+                buffer =""
+                return Pair(TokenType.END, "END")
+            }
+            ":=" -> {
+                buffer =""
+                return Pair(TokenType.ASSIGN, ":=")
+            }
+        }
+        return Pair(null, "")
     }
 
     private fun forward() {
@@ -74,9 +115,16 @@ class Lexer(val text: String) {
 }
 
 fun main(args: Array<String>) {
-    val lexer = Lexer("2 + 2")
+    val lexer = Lexer("BEGIN\n hello := 2 + 2; \nEND . ;")
     println(lexer.nextToken())
     println(lexer.nextToken())
     println(lexer.nextToken())
+    println(lexer.nextToken())
+    println(lexer.nextToken())
+    println(lexer.nextToken())
+    println(lexer.nextToken())
+    println(lexer.nextToken())
+    println(lexer.nextToken())
+
 }
 
