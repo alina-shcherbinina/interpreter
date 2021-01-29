@@ -1,14 +1,13 @@
-class Lexer(val text: String) {
+class Lexer(private val text: String) {
     private var pos: Int = 0
     private var currentChar: Char? = null
-    private var buffer = ""
-    private var secondBuffer = ""
+    private var temp: String = ""
 
     init {
         currentChar = text[pos]
     }
 
-    public fun nextToken(): Token {
+    public fun nextToken(): Token? {
         var value: String
         var type: TokenType?
 
@@ -19,6 +18,16 @@ class Lexer(val text: String) {
             }
             if (currentChar!!.isDigit()) {
                 return Token(TokenType.NUMBER, number())
+            }
+
+            if (currentChar!!.isLetter()) {
+                var pair = getMulCharToken()
+                type = pair.first
+                value = pair.second
+
+                type?.let {
+                    return Token(it, value)
+                }
             }
 
             type = null
@@ -32,59 +41,53 @@ class Lexer(val text: String) {
                 '(' -> type = TokenType.LPAREN
                 ')' -> type = TokenType.RPAREN
                 ';' -> type = TokenType.EOL
-                '.' -> type = TokenType.EXIT
-                else ->{
-                    var pair = collectChars(currentChar!!)
-                    type = pair.first
-                    value = pair.second
+                '.' -> {
+                    type = TokenType.DOT
+                }
+                ':' -> {
+                    var nextChar: Char?
+
+                    while (true) {
+                        nextChar = text[pos + 1]
+                        forward()
+                        if (nextChar == '=') break;
+                    }
+
+                    value = ":="
+                    type = TokenType.ASSIGN
 
                 }
             }
 
-            type?.let {
+            if (type != null) {
                 forward()
-                return Token(it, value)
+                return Token(type, value)
             }
 
-            if(type == null){
-                forward()
-                continue
-            }
 
             throw InterpreterException("invalid token")
         }
-        return Token(TokenType.EOL, "")
+        return null
     }
 
-    private  fun collectChars(currentChar: Char): Pair<TokenType?, String> {
+    private fun getMulCharToken(): Pair<TokenType?, String> {
 
-        if (secondBuffer.isNotEmpty()){
-            buffer = secondBuffer
-            secondBuffer = ""
+        temp = ""
+
+        while (currentChar!!.isLetter()) {
+            temp += currentChar
+            forward()
         }
 
-        if(buffer.isNotBlank() && currentChar == ':'){
-            secondBuffer = ":"
-            return Pair(TokenType.VAR, buffer)
-        }
-
-        buffer  += currentChar
-
-        when(buffer){
+        return when (temp) {
             "BEGIN" -> {
-                buffer =""
-                return Pair(TokenType.BEGIN, "BEGIN")
+                Pair(TokenType.BEGIN, "BEGIN")
             }
             "END" -> {
-                buffer =""
-                return Pair(TokenType.END, "END")
+                Pair(TokenType.END, "END")
             }
-            ":=" -> {
-                buffer =""
-                return Pair(TokenType.ASSIGN, ":=")
-            }
+            else -> Pair(TokenType.ID, temp)
         }
-        return Pair(null, "")
     }
 
     private fun forward() {
@@ -115,16 +118,19 @@ class Lexer(val text: String) {
 }
 
 fun main(args: Array<String>) {
-    val lexer = Lexer("BEGIN\n hello := 2 + 2; \nEND . ;")
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-    println(lexer.nextToken())
-
+    val lexer = Lexer("BEGIN\n" +
+            "    y: = 2;\n" +
+            "    BEGIN\n" +
+            "        a := 3;\n" +
+            "        a := a;\n" +
+            "        b := 10 + a + 10 * y / 4;\n" +
+            "        c := a - b\n" +
+            "    END;\n" +
+            "    x := 11;\n" +
+            "END.")
+    var token = lexer.nextToken()
+    while (token != null) {
+        println(token)
+        token = lexer.nextToken()
+    }
 }
-
